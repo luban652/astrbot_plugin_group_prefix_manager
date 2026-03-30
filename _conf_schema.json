@@ -1,58 +1,38 @@
 {
-  "enable_plugin": {
-    "description": "是否启用插件功能",
+  "global_enabled": {
+    "description": "是否全局开启插件功能。若为 true，则忽略白名单，在所有群组生效。",
     "type": "bool",
-    "hint": "开启后插件将开始检测群聊消息并自动修改群名",
-    "default": true,
-    "obvious_hint": true
-  },
-  "require_admin": {
-    "description": "是否需要管理员权限",
-    "type": "bool",
-    "hint": "开启后只有管理员发送的数字消息才会触发修改群名",
-    "default": false,
-    "obvious_hint": false
+    "hint": "开启后，机器人加入的所有群聊都会触发前缀修改功能。",
+    "default": false
   },
   "whitelist": {
-    "description": "群聊白名单",
+    "description": "启用插件功能的群组白名单列表",
     "type": "list",
-    "hint": "在此列表中的群聊才会触发修改群名功能（填写群号，如[123456,789012]）",
-    "default": [],
-    "obvious_hint": false
+    "hint": "当 global_enabled 为 false 时，只有在此列表中的群组 ID 才会生效。",
+    "default": []
   },
-  "blacklist": {
-    "description": "群聊黑名单",
-    "type": "list",
-    "hint": "在此列表中的群聊不会触发修改群名功能（填写群号，如[123456,789012]）",
-    "default": [],
-    "obvious_hint": false
-  },
-  "number_length": {
-    "description": "触发修改的数字长度",
+  "max_length": {
+    "description": "群名称允许的最大字符长度",
     "type": "int",
-    "hint": "当消息中包含指定长度的纯数字时会触发修改群名",
-    "default": 5,
-    "obvious_hint": false,
-    "options": [
-      3,
-      4,
-      5,
-      6,
-      7
-    ]
+    "hint": "不同平台对群名长度限制不同（如QQ通常为30字符），超过此长度将自动截断尾部。",
+    "default": 30
   },
-  "cooldown_time": {
-    "description": "修改群名的冷却时间(秒)",
-    "type": "int",
-    "hint": "防止短时间内频繁修改群名",
-    "default": 60,
-    "obvious_hint": false
-  },
-  "log_changes": {
-    "description": "是否记录群名修改日志",
+  "enable_notify": {
+    "description": "修改成功后是否在群内发送提示消息",
     "type": "bool",
-    "hint": "开启后会记录每次群名修改的信息",
-    "default": true,
-    "obvious_hint": false
+    "hint": "开启后，机器人修改群名成功会回复一条确认消息。",
+    "default": true
+  },
+  "admin_only": {
+    "description": "是否仅限管理员触发数字前缀修改",
+    "type": "bool",
+    "hint": "若开启，普通成员发送5位数字将不会触发修改。",
+    "default": false
+  },
+  "ignore_patterns": {
+    "description": "忽略匹配的数字黑名单",
+    "type": "list",
+    "hint": "例如设置 ['00000', '11111']，则发送这些数字时不会触发修改。",
+    "default": []
   }
 }
