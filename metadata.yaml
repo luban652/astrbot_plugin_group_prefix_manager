@@ -1,5 +1,5 @@
-name: astrbot_plugin_group_name_changer
+name: astrbot_plugin_group_prefix_manager
 author: luban652
-description: 自动检测群聊中的五个数字消息并更改群名为该数字，支持aiocqhttp平台，提供黑白名单管理功能
+description: 检测群聊中独立的5位数字并将其设置为群名前缀。支持替换已有数字前缀、自动截断超长群名，并提供白名单模式及‘清空’指令。
 version: 1.0.0
-repo: https://github.com/luban652/astrbot_plugin_group_name_changer/blob/main/metadata.yaml
+repo: https://github.com/luban652/astrbot_plugin_group_prefix_manager
