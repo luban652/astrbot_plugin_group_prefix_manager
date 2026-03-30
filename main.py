@@ -22,7 +22,7 @@ class GroupPrefixManager(Star):
         self.prefix_find_pattern = re.compile(r"\d{5}")
         # 简单的频率限制缓存：group_id -> last_timestamp
         self.cooldown_cache = {}
-        self.cooldown_seconds = 10 
+        self.cooldown_seconds = 3 
 
     def _is_enabled(self, group_id: str) -> bool:
         """检查当前群组是否启用插件功能"""
