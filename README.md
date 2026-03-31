@@ -1,4 +1,3 @@
-markdown
 # astrbot_plugin_group_prefix_manager
 
 一款专为群组管理设计的 AstrBot 插件，能够自动识别群聊中的特定数字模式并将其同步为群名前缀，支持自动替换、长度截断及白名单管控。
@@ -66,8 +65,6 @@ markdown
 
 | 配置项 | 类型 | 描述 | 默认值 |
 | :--- | :--- | :--- | :--- |
-| `global_enabled` | bool | 是否全局开启（忽略白名单） | `false` |
-| `max_length` | int | 群名称允许的最大字符数 | `20` |
 | `whitelist` | list | 已启用插件功能的群组 ID 列表 | `[]` |
 
 ---
