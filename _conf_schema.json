@@ -1,7 +1,0 @@
-{
-  "whitelist": {
-    "description": "启用插件功能的群组白名单列表",
-    "type": "list",
-    "hint": "当 global_enabled 为 false 时，只有在此列表中的群组 ID 才会生效。",
-    "default": []
-}
