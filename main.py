@@ -1,6 +1,6 @@
 import re
 import time
-import yaml
+import json
 from pathlib import Path
 from typing import List
 from astrbot.api.event import filter, AstrMessageEvent
@@ -17,22 +17,63 @@ except ImportError:
 class GroupPrefixManager(Star):
     def __init__(self, context: Context):
         super().__init__(context)
-        self.config = self.context.get_config()
-        # 配置文件路径（AstrBot 固定路径）
-        self.config_path = Path(__file__).parent / "config.yml"
-        # 预编译正则：匹配独立的5位数字
+        # 配置文件路径
+        self.config_path = Path(__file__).parent / "config.json"
+        # 加载配置
+        self.config = self._load_config()
+        # 合并默认配置
+        self._merge_default_config()
+        # 预编译正则
         self.digit_pattern = re.compile(r"^\d{5}$")
-        # 预编译正则：查找群名中存在的5位连续数字
         self.prefix_find_pattern = re.compile(r"\d{5}")
-        # 简单的频率限制缓存：group_id -> last_timestamp
+        # 频率限制
         self.cooldown_cache = {}
         self.cooldown_seconds = 3
 
+    def _load_config(self):
+        """加载配置文件"""
+        default_config = {
+            "global_enabled": False,
+            "whitelist": [],
+            "max_length": 30,
+            "enable_notify": True,
+            "admin_only": False,
+            "ignore_patterns": []
+        }
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    # 合并，确保所有字段都存在
+                    for key, value in default_config.items():
+                        if key not in config:
+                            config[key] = value
+                    return config
+            except Exception as e:
+                logger.error(f"加载配置失败: {e}")
+                return default_config
+        return default_config
+
+    def _merge_default_config(self):
+        """合并默认配置"""
+        default_config = {
+            "global_enabled": False,
+            "whitelist": [],
+            "max_length": 30,
+            "enable_notify": True,
+            "admin_only": False,
+            "ignore_patterns": []
+        }
+        for key, value in default_config.items():
+            if key not in self.config:
+                self.config[key] = value
+
     def _save_config(self):
-        """【核心修复】直接写入文件保存配置，兼容所有 AstrBot v4 版本"""
+        """保存配置到文件"""
         try:
             with open(self.config_path, "w", encoding="utf-8") as f:
-                yaml.dump(self.config, f, allow_unicode=True, sort_keys=False)
+                json.dump(self.config, f, ensure_ascii=False, indent=2)
+            logger.info(f"配置已保存: {self.config_path}")
         except Exception as e:
             logger.error(f"保存配置失败: {e}")
 
@@ -41,7 +82,8 @@ class GroupPrefixManager(Star):
         if self.config.get("global_enabled", False):
             return True
         whitelist = self.config.get("whitelist", [])
-        return group_id in whitelist
+        # 确保 group_id 是字符串类型进行比较
+        return str(group_id) in whitelist
 
     def _check_cooldown(self, group_id: str) -> bool:
         """检查群组操作频率限制"""
@@ -58,37 +100,47 @@ class GroupPrefixManager(Star):
         """管理数字前缀插件的群组白名单（开启/关闭）"""
         group_id = event.message_obj.group_id
         if not group_id:
-            yield event.plain_result("此指令仅限群聊使用。")
+            yield event.plain_result("仅限群聊")
             return
 
+        group_id_str = str(group_id)
         current_whitelist = list(self.config.get("whitelist", []))
         
         if action == "on":
-            if group_id not in current_whitelist:
-                current_whitelist.append(group_id)
+            if group_id_str not in current_whitelist:
+                current_whitelist.append(group_id_str)
                 self.config["whitelist"] = current_whitelist
                 self._save_config()
-                yield event.plain_result(f"✅群 {group_id} 已开启数字前缀功能。")
+                yield event.plain_result(f"✅已开启")
+                logger.info(f"群 {group_id_str} 已加入白名单")
             else:
-                yield event.plain_result(f"ℹ️群 {group_id} 已在白名单中。")
+                yield event.plain_result(f"ℹ️已开启")
         elif action == "off":
-            if group_id in current_whitelist:
-                current_whitelist.remove(group_id)
+            if group_id_str in current_whitelist:
+                current_whitelist.remove(group_id_str)
                 self.config["whitelist"] = current_whitelist
-                self._save_config() 
-                yield event.plain_result(f"✅群 {group_id} 已关闭数字前缀功能。")
+                self._save_config()
+                yield event.plain_result(f"✅已关闭")
+                logger.info(f"群 {group_id_str} 已移出白名单")
             else:
-                yield event.plain_result(f"ℹ️群 {group_id} 不在白名单中。")
+                yield event.plain_result(f"ℹ️已关闭")
         else:
-            yield event.plain_result("❌参数错误。请使用: /prefix_whitelist on/off")
+            yield event.plain_result("❌参数错误")
 
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     async def handle_group_message(self, event: AstrMessageEvent):
         """核心逻辑：监听群消息并处理前缀修改"""
         group_id = event.message_obj.group_id
-        if not group_id or not self._is_enabled(group_id):
+        if not group_id:
+            return
+        
+        group_id_str = str(group_id)
+        
+        # 检查是否启用
+        if not self._is_enabled(group_id_str):
             return
 
+        # 检查权限
         if self.config.get("admin_only", False):
             if event.get_permission_level() < filter.PermissionType.ADMIN:
                 return
@@ -117,11 +169,11 @@ class GroupPrefixManager(Star):
         if not is_cqhttp:
             return
 
-        group_id = event.message_obj.group_id
+        group_id = str(event.message_obj.group_id)
         
         if not self._check_cooldown(group_id):
             if self.config.get("enable_notify", True):
-                await event.send(event.plain_result("⚠️操作太频繁了，请稍后再试。"))
+                await event.send(event.plain_result("⏳稍后再试"))
             return
 
         try:
@@ -149,7 +201,7 @@ class GroupPrefixManager(Star):
 
             await client.api.call_action('set_group_name', group_id=int_group_id, group_name=target_name)
             
-            if self.config.get("enable_notify", True):
+            if self.config.get("enable_notify", True) and not clear:
                 await event.send(event.plain_result(""))
                     
         except ValueError:
@@ -157,7 +209,7 @@ class GroupPrefixManager(Star):
         except Exception as e:
             logger.error(f"修改群名失败: {str(e)}")
             if self.config.get("enable_notify", True):
-                await event.send(event.plain_result("❌修改失败，请确保机器人拥有管理员权限。"))
+                await event.send(event.plain_result("❌失败"))
 
     async def terminate(self):
         pass
